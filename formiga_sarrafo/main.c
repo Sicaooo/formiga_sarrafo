@@ -112,6 +112,28 @@ void init_formigas(Formigas* formigas, int qnt_formigas) {
 	for (int i = 0; i < qnt_formigas; ++i) formigas->qnt_sarrafos_formiga[i] = 1;
 }
 
+void print_sarrafos(Formigas* formigas, int qnt_formigas) {
+	for (int i = 0; i < qnt_formigas; ++i) {
+		int num_sarrafo = 1;
+		printf("Formiga %d\n", i + 1);
+
+		NoLista* no_formiga_atual = formigas->inicio_formiga[i];
+		NoLista* no_sobra_atual = formigas->inicio_sobra[i];
+
+		printf("Cortes sarrafo 1: ");
+		while (no_formiga_atual) {
+			if (no_formiga_atual->dado == DELIMITADOR_FIM_SARRAFO) {
+				printf("\nSobra sarrafo %d: %d", num_sarrafo, no_sobra_atual->dado);
+				printf("\n\nCortes sarrafo %d: ", ++num_sarrafo);
+				no_sobra_atual = no_sobra_atual->prox;
+				continue;
+			}
+			printf("%d ", no_formiga_atual->dado);
+			no_formiga_atual = no_formiga_atual->prox;
+		}
+	}
+}
+
 int main(void) {
 	//teste das funções
 	Formigas teste;
@@ -120,7 +142,7 @@ int main(void) {
 	push_formiga(&teste, 1, &tamanho, 5, 0);
 	push_formiga(&teste, 2, &tamanho, 5, 0);
 	push_formiga(&teste, 3, &tamanho, 5, 0);
-
+	print_sarrafos(&teste, 3);
 
 	int tam_sarrafos;
 	printf("Insira o tamanho dos sarrafos (cm): ");
