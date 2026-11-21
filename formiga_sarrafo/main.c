@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #define QNT_FORMIGAS 3
 #define DELIMITADOR_FIM_SARRAFO -1
@@ -125,10 +126,51 @@ void print_sarrafos(Formiga* formigas, int qnt_formigas, int idx) {
 	}
 }
 
+void init_matriz_cortes(int* matriz_cortes, int qnt_cortes, Corte* cortes) {
+	for (int i = 0; i < qnt_cortes; ++i) {
+		for (int j = 0; j < qnt_cortes; ++j) {
+			matriz_cortes[j + (i * qnt_cortes)] = cortes[j].tamanho;
+		}
+	}
+}
+
+void init_matriz_feromonios(float* feromonios, int qnt_cortes) {
+	for (int i = 0; i < qnt_cortes * qnt_cortes; ++i) {
+		feromonios[i] = 1.0f;
+	}
+}
+
+void atualizar_feromonios(float* __restrict feromonios, float taxa_evaporacao, int qnt_cortes) {
+	for (int i = 0; i < qnt_cortes * qnt_cortes; ++i) feromonios[i] -= feromonios[i] * taxa_evaporacao;
+}
+
+void probabilidade_transicao(float* chance_visitar, float* feromonios, const float peso_feromonio, const float* matriz_cortes, const float peso_heuristica, int qnt_cortes) {
+	float soma = 0.0f;
+	for (int i = 0; i < qnt_cortes; ++i) {
+		soma += powf(matriz_cortes[i], peso_heuristica) * pow(feromonios[i], peso_feromonio);
+	}
+
+	for (int i = 0; i < qnt_cortes; ++i) {
+		chance_visitar[i] = (pow(feromonios[i], peso_feromonio) * pow(matriz_cortes[i], peso_heuristica)) / soma;
+	}
+}
+
+int escolha_transicao(float* chance_visitar, int qnt_cortes) {
+	float num_sorteio = (float)(rand() % 10000) / 10000.0f;
+
+	float chances_acumuladas = 0.0f;
+	int i;
+	for (i = 0; i < qnt_cortes; ++i) {
+		chances_acumuladas += chance_visitar[i];
+		if (chances_acumuladas && chances_acumuladas >= num_sorteio) break;
+	}
+
+	return i;
+}
 
 
 int main(void) {
-	//teste das funções
+	/*teste das funções
 	Formiga teste[QNT_FORMIGAS];
 	init_formigas(&teste, QNT_FORMIGAS);
 	int tamanho = 5;
@@ -136,28 +178,56 @@ int main(void) {
 	push_formiga(teste, 2, &tamanho, 5, 0);
 	push_formiga(teste, 3, &tamanho, 5, 0);
 	print_sarrafos(teste, QNT_FORMIGAS, 0);
+	*/
 
+	//int tam_sarrafos;
+	//printf("Insira o tamanho dos sarrafos (cm): ");
+	//scanf("%d", &tam_sarrafos);
 
-	int tam_sarrafos;
-	printf("Insira o tamanho dos sarrafos (cm): ");
-	scanf("%d", &tam_sarrafos);
+	//Corte* cortes;
 
-	Corte* cortes;
+	//int qnt_cortes;
+	//printf("Insira a quantidade de cortes: ");
+	//scanf("%d", &qnt_cortes);
 
-	int qnt_cortes;
-	printf("Insira a quantidade de cortes: ");
-	scanf("%d", &qnt_cortes);
+	//cortes = malloc(qnt_cortes * sizeof(*cortes));
+	//if (!cortes) {
+	//	puts("Problema na alocacao de memoria para armazenar os cortes");
+	//	return 1;
+	//}
 
-	cortes = malloc(qnt_cortes * sizeof(*cortes));
-	if (!cortes) {
-		puts("problema na alocacao de memoria para os cortes");
+	//puts("Insira o tamanho do corte (cm) e a quantidade separado por um espaco");
+	//for (int i = 0; i < qnt_cortes; ++i) {
+	//	scanf("%d %d", &cortes[i].tamanho, &cortes[i].quantidade);
+	//}
+
+	int qnt_cortes = 3;
+	Corte cortes[3] = { { 3, 10 },{ 4, 20 },{ 5, 30 } };
+	Formiga formigas[QNT_FORMIGAS];
+	init_formigas(formigas, QNT_FORMIGAS);
+	const float peso_heuristica = 0.5f;
+	const float peso_feromonio = 0.5f;
+	const float feromonio_por_formiga = 1.0f;
+	const float taxa_evaporacao = 0.1f;
+
+	int* matriz_cortes = malloc(qnt_cortes * qnt_cortes * sizeof(*matriz_cortes));
+	if (!matriz_cortes) {
+		puts("Problema na alocacao de memoria para a matriz de cortes");
 		return 1;
 	}
 
-	puts("Insira o tamanho do corte (cm) e a quantidade separado por um espaco");
-	for (int i = 0; i < qnt_cortes; ++i) {
-		scanf("%d %d", &cortes[i].tamanho, &cortes[i].quantidade);
+	init_matriz_cortes(matriz_cortes, qnt_cortes, cortes);
+
+	float* feromonios = malloc(qnt_cortes * qnt_cortes * sizeof(*feromonios));
+	if (!feromonios) {
+		puts("Problema na alocacao de memoria para matriz de feromonios");
+		free(matriz_cortes);
+		return 1;
 	}
+
+	init_matriz_feromonios(feromonios, qnt_cortes);	
+
+
 
 	free(cortes);
 
