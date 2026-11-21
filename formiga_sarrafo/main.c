@@ -64,7 +64,10 @@ void push_formiga(Formigas* formigas, int dado, int* tamanho_restante_sarrafo, i
 	NoLista* novo_no = malloc(sizeof(*novo_no));
 	if (!novo_no) exit(EXIT_FAILURE);
 
-	if (!formigas->ultima_formiga[idx]) formigas->ultima_formiga[idx] = formigas->inicio_formiga[idx] = novo_no;
+	if (!formigas->ultima_formiga[idx]) {
+		formigas->ultima_formiga[idx] = formigas->inicio_formiga[idx] = novo_no;
+		push_sobras(formigas, tamanho_sarrafo, idx);
+	}
 	else {
 		formigas->ultima_formiga[idx]->prox = novo_no;
 		formigas->ultima_formiga[idx] = novo_no;
@@ -75,14 +78,18 @@ void push_formiga(Formigas* formigas, int dado, int* tamanho_restante_sarrafo, i
 	novo_no->dado = (dado > *tamanho_restante_sarrafo) ? DELIMITADOR_FIM_SARRAFO : dado;
 
 	if (novo_no->dado == DELIMITADOR_FIM_SARRAFO) {
+		*tamanho_restante_sarrafo = tamanho_sarrafo;
+		push_formiga(formigas, dado, tamanho_restante_sarrafo, tamanho_sarrafo, idx);
 		push_sobras(formigas, *tamanho_restante_sarrafo, idx);
+		++formigas->qnt_sarrafos_formiga[idx];
 		return;
 	}
 
 	*tamanho_restante_sarrafo -= dado;
 
+	(*formigas->ultima_sobra)->dado = *tamanho_restante_sarrafo;
+
 	if (!*tamanho_restante_sarrafo) {
-		push_sobras(formigas, 0, idx);
 		*tamanho_restante_sarrafo = tamanho_sarrafo;
 		++formigas->qnt_sarrafos_formiga[idx];
 	}
@@ -112,24 +119,26 @@ void init_formigas(Formigas* formigas, int qnt_formigas) {
 	for (int i = 0; i < qnt_formigas; ++i) formigas->qnt_sarrafos_formiga[i] = 1;
 }
 
-void print_sarrafos(Formigas* formigas, int qnt_formigas) {
+void print_sarrafos(Formigas* formigas, int qnt_formigas, int idx) {
 	for (int i = 0; i < qnt_formigas; ++i) {
-		int num_sarrafo = 1;
 		printf("Formiga %d\n", i + 1);
 
 		NoLista* no_formiga_atual = formigas->inicio_formiga[i];
 		NoLista* no_sobra_atual = formigas->inicio_sobra[i];
 
-		printf("Cortes sarrafo 1: ");
-		while (no_formiga_atual) {
-			if (no_formiga_atual->dado == DELIMITADOR_FIM_SARRAFO) {
-				printf("\nSobra sarrafo %d: %d", num_sarrafo, no_sobra_atual->dado);
-				printf("\n\nCortes sarrafo %d: ", ++num_sarrafo);
-				no_sobra_atual = no_sobra_atual->prox;
-				continue;
+		for (int num_sarrafo = 1; num_sarrafo <= formigas->qnt_sarrafos_formiga[idx]; ++num_sarrafo) {
+			if (num_sarrafo != 1) printf("\n");
+			printf("Cortes sarrafo %d: ", num_sarrafo);
+			while (no_formiga_atual) {
+				if (no_formiga_atual->dado == DELIMITADOR_FIM_SARRAFO) {
+					no_formiga_atual = no_formiga_atual->prox;
+					break;
+				}
+				printf("%d ", no_formiga_atual->dado);
+				no_formiga_atual = no_formiga_atual->prox;
 			}
-			printf("%d ", no_formiga_atual->dado);
-			no_formiga_atual = no_formiga_atual->prox;
+
+			printf("\nSobra sarrafo %d: %d\n", num_sarrafo, no_sobra_atual->dado);
 		}
 	}
 }
@@ -142,7 +151,7 @@ int main(void) {
 	push_formiga(&teste, 1, &tamanho, 5, 0);
 	push_formiga(&teste, 2, &tamanho, 5, 0);
 	push_formiga(&teste, 3, &tamanho, 5, 0);
-	print_sarrafos(&teste, 3);
+	print_sarrafos(&teste, 1, 0);
 
 	int tam_sarrafos;
 	printf("Insira o tamanho dos sarrafos (cm): ");
