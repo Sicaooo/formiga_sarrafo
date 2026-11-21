@@ -2,21 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define QNT_FORMIGAS 3
 #define DELIMITADOR_FIM_SARRAFO -1
 #define CORTE_NAO_CABE NULL
 #define SUCESSO 0
 
-/*
-Armazena as informações dos cortes
-tamanho: vetor de tamanho dos cortes
-quantidade: vetor da quantidade de cada corte
-Exemplo: as informações do primeiro corte serão acessadas por
-Cortes->quantidade[0]; e Cortes->tamanho[0];
-*/
 typedef struct {
-	int* quantidade;
-	int* tamanho;
-} Cortes;
+	int quantidade;
+	int tamanho; //(cm)
+} Corte;
 
 /*
 No das listas usadas pela estrutura de Formigas
@@ -109,6 +103,8 @@ void print_sarrafos(Formiga* formigas, int qnt_formigas, int idx) {
 		NoLista* no_formiga_atual = formigas[i].ultima_formiga;
 		NoLista* no_sobra_atual = formigas[i].ultima_sobra;
 
+		if (!no_formiga_atual || !no_sobra_atual) continue;
+
 		while (no_formiga_atual->ant) no_formiga_atual = no_formiga_atual->ant;
 		while (no_sobra_atual->ant) no_sobra_atual = no_sobra_atual->ant;
 
@@ -129,44 +125,41 @@ void print_sarrafos(Formiga* formigas, int qnt_formigas, int idx) {
 	}
 }
 
+
+
 int main(void) {
 	//teste das funções
-	Formiga teste[3];
-	init_formigas(&teste, 3);
+	Formiga teste[QNT_FORMIGAS];
+	init_formigas(&teste, QNT_FORMIGAS);
 	int tamanho = 5;
 	push_formiga(teste, 1, &tamanho, 5, 0);
 	push_formiga(teste, 2, &tamanho, 5, 0);
 	push_formiga(teste, 3, &tamanho, 5, 0);
-	print_sarrafos(teste, 1, 0);
+	print_sarrafos(teste, QNT_FORMIGAS, 0);
+
 
 	int tam_sarrafos;
 	printf("Insira o tamanho dos sarrafos (cm): ");
 	scanf("%d", &tam_sarrafos);
 
-	Cortes cortes;
+	Corte* cortes;
 
 	int qnt_cortes;
 	printf("Insira a quantidade de cortes: ");
 	scanf("%d", &qnt_cortes);
 
-	cortes.quantidade = malloc(qnt_cortes * sizeof(*cortes.quantidade));
-	cortes.tamanho = malloc(qnt_cortes * sizeof(*cortes.tamanho));
-	if (!cortes.quantidade || !cortes.tamanho) {
+	cortes = malloc(qnt_cortes * sizeof(*cortes));
+	if (!cortes) {
 		puts("problema na alocacao de memoria para os cortes");
-
-		free(cortes.tamanho);
-		free(cortes.quantidade);
-
 		return 1;
 	}
 
 	puts("Insira o tamanho do corte (cm) e a quantidade separado por um espaco");
 	for (int i = 0; i < qnt_cortes; ++i) {
-		scanf("%d %d", cortes.tamanho + i, cortes.quantidade + i);
+		scanf("%d %d", &cortes[i].tamanho, &cortes[i].quantidade);
 	}
 
-	free(cortes.tamanho);
-	free(cortes.quantidade);
+	free(cortes);
 
 	return 0;
 }
