@@ -6,10 +6,6 @@
 #include <stdbool.h>
 
 #define DELIMITADOR_FIM_SARRAFO -1
-//Constante para deposito de feromonio: Q
-#define Q 1
-//rô "p" taxa de evaporação: p
-#define p 0.1f
 #define SUCESSO 0
 #define CORTE_NAO_EXISTE 1
 
@@ -207,16 +203,16 @@ double funcao_objetivo(Formiga* formiga, int tamanho_sarrafo) {
 }
 
 // Atualização Depósito proporcional direto (Q * F_k)
-void atualizar_feromonios(float* feromonios, Formiga* formigas, Corte* cortes, int qnt_cortes, int tamanho_sarrafo, double* fitness_formigas, int qnt_formigas) {
+void atualizar_feromonios(float* feromonios, Formiga* formigas, Corte* cortes, int qnt_cortes, int tamanho_sarrafo, double* fitness_formigas, int qnt_formigas, const float FEROMONIO_POR_FORMIGA, const float TAXA_EVAPORACAO) {
 	//evaporação (1 - rô) * tau_ij(t) em toda a matriz
 	int total_elementos = qnt_cortes * qnt_cortes;
 	for (int i = 0; i < total_elementos; i++) {
-		feromonios[i] *= (1.0f - p);	
+		feromonios[i] *= (1.0f - TAXA_EVAPORACAO);	
 	}
 
 	//deposito somatório de (Q * F_k) para cada formiga k
 	for (int k = 0; k < qnt_formigas; k++) {
-		float delta = Q * (float)fitness_formigas[k];
+		float delta = FEROMONIO_POR_FORMIGA * (float)fitness_formigas[k];
 
 		NoLista* atual = formigas[k].ultima_formiga;
 
@@ -322,6 +318,8 @@ int main(void) {
 	const float PESO_HEURISTICA = 0.5f;
 	const float PESO_FEROMONIO = 0.5f;
 	const int MAX_GERACOES = 50;
+	const float FEROMONIO_POR_FORMIGA = 1.0f;
+	const float TAXA_EVAPORACAO = 0.1f;
 
 	int tamanho_sarrafo;
 	printf("Insira o tamanho de cada sarrafo: ");
@@ -437,7 +435,7 @@ int main(void) {
 			copiar_formiga(&melhor_formiga, formigas + pos_maior_fitness_atual);
 		}
 
-		atualizar_feromonios(feromonios, formigas, matriz_cortes, qnt_cortes, tamanho_sarrafo, fitness_formigas, qnt_formigas);
+		atualizar_feromonios(feromonios, formigas, matriz_cortes, qnt_cortes, tamanho_sarrafo, fitness_formigas, qnt_formigas, FEROMONIO_POR_FORMIGA, TAXA_EVAPORACAO);
 
 		liberar_formigas(formigas, qnt_formigas);
 	}
