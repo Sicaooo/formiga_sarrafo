@@ -5,7 +5,6 @@
 #include <time.h>
 #include <stdbool.h>
 
-#define QNT_FORMIGAS 3
 #define DELIMITADOR_FIM_SARRAFO -1
 //Constante para deposito de feromonio: Q
 #define Q 1
@@ -208,7 +207,7 @@ double funcao_objetivo(Formiga* formiga, int tamanho_sarrafo) {
 }
 
 // Atualização Depósito proporcional direto (Q * F_k)
-void atualizar_feromonios(float* feromonios, Formiga* formigas, Corte* cortes, int qnt_cortes, int numero_maximo_cortes, int tamanho_sarrafo, double* fitness_formigas, int qnt_formigas) {
+void atualizar_feromonios(float* feromonios, Formiga* formigas, Corte* cortes, int qnt_cortes, int tamanho_sarrafo, double* fitness_formigas, int qnt_formigas) {
 	//evaporação (1 - rô) * tau_ij(t) em toda a matriz
 	int total_elementos = qnt_cortes * qnt_cortes;
 	for (int i = 0; i < total_elementos; i++) {
@@ -240,19 +239,19 @@ void atualizar_feromonios(float* feromonios, Formiga* formigas, Corte* cortes, i
 	}
 }
 
-void probabilidade_transicao(float* chance_visitar, float* feromonios, const float peso_feromonio, const Corte* matriz_cortes, int qnt_cortes, const float peso_heuristica) {
+void probabilidade_transicao(float* chance_visitar, float* feromonios, const float PESO_FEROMONIO, const Corte* matriz_cortes, int qnt_cortes, const float PESO_HEURISTICA) {
 	float soma = 0.0f;
 	for (int i = 0; i < qnt_cortes; ++i) {
-		soma += powf(matriz_cortes[i].tamanho, peso_heuristica) * powf(feromonios[i], peso_feromonio) * (matriz_cortes[i].quantidade > 0);
+		soma += powf(matriz_cortes[i].tamanho, PESO_HEURISTICA) * powf(feromonios[i], PESO_FEROMONIO) * (matriz_cortes[i].quantidade > 0);
 	}
 
 	for (int i = 0; i < qnt_cortes; ++i) {
-		chance_visitar[i] = (matriz_cortes[i].quantidade) ? (powf(feromonios[i], peso_feromonio) * powf(matriz_cortes[i].tamanho, peso_heuristica)) / soma : 0.0f;
+		chance_visitar[i] = (matriz_cortes[i].quantidade) ? (powf(feromonios[i], PESO_FEROMONIO) * powf(matriz_cortes[i].tamanho, PESO_HEURISTICA)) / soma : 0.0f;
 	}
 }
 
 int escolha_transicao(float* chance_visitar, int qnt_cortes) {
-	float num_sorteio = (float)(rand() % 10000) / 10000.0f;
+	float num_sorteio = (float)rand() / RAND_MAX;
 
 	float chances_acumuladas = 0.0f;
 	int i;
@@ -270,20 +269,6 @@ void gerar_numeros_aleatorios(void) {
 	for (int i = 0; i < limit; ++i) rand();
 }
 
-void inicializar_posicoes(int* caminhos, int qnt_cortes) {
-	for (int i = 0; i < qnt_cortes; ++i) {
-		caminhos[i * qnt_cortes] = i;
-	}
-}
-
-bool possui_cortes(Corte* cortes, int qnt_cortes) {
-	for (int i = 0; i < qnt_cortes; ++i) {
-		if (cortes[i].quantidade) return true;
-	}
-
-	return false;
-}
-
 void liberar_nos(NoLista* no) {
 	while (no) {
 		NoLista* temp = no->ant;
@@ -292,7 +277,7 @@ void liberar_nos(NoLista* no) {
 	}
 }
 
-void free_formigas(Formiga* formigas, int qnt_formigas) {
+void liberar_formigas(Formiga* formigas, int qnt_formigas) {
 	for (int i = 0; i < qnt_formigas; ++i) {
 		liberar_nos(formigas[i].ultima_formiga);
 		liberar_nos(formigas[i].ultima_sobra);
@@ -331,44 +316,64 @@ void copiar_formiga(Formiga* dst, Formiga* src) {
 }
 
 int main(void) {
-	//int tam_sarrafos;
-	//printf("Insira o tamanho dos sarrafos (cm): ");
-	//scanf("%d", &tam_sarrafos);
-
-	//Corte* cortes;
-
-	//int qnt_cortes;
-	//printf("Insira a quantidade de cortes: ");
-	//scanf("%d", &qnt_cortes);
-
-	//cortes = malloc(qnt_cortes * sizeof(*cortes));
-	//if (!cortes) {
-	//	puts("Problema na alocacao de memoria para armazenar os cortes");
-	//	return 1;
-	//}
-
-	//puts("Insira o tamanho do corte (cm) e a quantidade separado por um espaco");
-	//for (int i = 0; i < qnt_cortes; ++i) {
-	//	scanf("%d %d", &cortes[i].tamanho, &cortes[i].quantidade);
-	//}
+	int codigo_saida = 1;
 	gerar_numeros_aleatorios();
 
-	int qnt_cortes = 3;
+	const float PESO_HEURISTICA = 0.5f;
+	const float PESO_FEROMONIO = 0.5f;
+	const int MAX_GERACOES = 50;
+
+	int tamanho_sarrafo;
+	printf("Insira o tamanho de cada sarrafo: ");
+	if (scanf("%d", &tamanho_sarrafo) != 1) {
+		puts("Falha na leitura do tamanho de cada sarrafo");
+		return 1;
+	}
+
+	int qnt_cortes;
+	printf("Insira a quantidade de cortes: ");
+	if (scanf("%d", &qnt_cortes) != 1) {
+		puts("Falha na leitura da quantidade de cortes");
+		return 1;
+	}
 	int qnt_formigas = qnt_cortes;
-	Corte molde_cortes[3] = { { 3, 10 },{ 4, 20 },{ 5, 30 } };
+	
+	Corte* molde_cortes = malloc(qnt_cortes * sizeof(*molde_cortes));
+	if (!molde_cortes) {
+		puts("Falha na alocacao de memoria para molde de cortes");
+		goto free_molde_cortes;
+	}
 
-	Corte matriz_cortes[3][3];
+	puts("Insira o tamanho (cm) e a quantidade de cada corte");
+	for (int i = 0; i < qnt_cortes; ++i) {
+		if (scanf("%d %d", &molde_cortes[i].tamanho, &molde_cortes[i].quantidade) != 2) {
+			puts("Falha na leitura do corte");
+			return 1;
+		}
+	}
 	
-	Formiga formigas[QNT_FORMIGAS];
+	Corte* matriz_cortes = malloc(qnt_formigas * qnt_cortes * sizeof(*matriz_cortes));
+	if (!matriz_cortes) {
+		puts("Falha na alocacao de memoria para matriz de cortes");
+		goto free_matriz_cortes;
+	}
 	
-	const int TAMANHO_SARRAFO = 100;
-	
-	int sarrafo_restante[3];
-
+	Formiga* formigas = malloc(qnt_formigas * sizeof(*formigas));
+	if (!formigas) {
+		puts("Falha na alocacao de memoria para formigas");
+		return 1;
+	}
 	init_formigas(formigas, qnt_formigas);
 	
-	const float peso_heuristica = 0.5f;
-	const float peso_feromonio = 0.5f;
+	Formiga melhor_formiga;
+
+	init_formigas(&melhor_formiga, 1);
+	
+	int* sarrafo_restante = malloc(qnt_cortes * sizeof(*sarrafo_restante));
+	if (!sarrafo_restante) {
+		puts("Falha na alocacao de memoria para vetor de resto de sarrafos");
+		goto free_sarrafo_restante;
+	}
 
 	int numero_maximo_cortes = 0;
 	for (int i = 0; i < qnt_cortes; ++i) numero_maximo_cortes += molde_cortes[i].quantidade;
@@ -376,47 +381,47 @@ int main(void) {
 	float* feromonios = malloc(qnt_cortes * qnt_cortes * sizeof(*feromonios));
 	if (!feromonios) {
 		puts("Problema na alocacao de memoria para matriz de feromonios");
-		free(matriz_cortes);
-		return 1;
+		goto free_feromonios;
 	}
 
 	init_matriz_feromonios(feromonios, qnt_cortes);
 
 	float* chance_visitar = malloc(qnt_cortes * sizeof(*chance_visitar));
-	if (!chance_visitar) return 1;
-
-	int contador_formigas_finalizadas = 0;
+	if (!chance_visitar) {
+		puts("Falha na alocacao de memoria do vetor de chances de visita dos tours");
+		goto free_chance_visitar;
+	}
 
 	double* fitness_formigas = malloc(qnt_formigas * sizeof(*fitness_formigas));
-	if (!fitness_formigas) return 1;
-
-	Formiga melhor_formiga;
-	init_formigas(&melhor_formiga, 1);
+	if (!fitness_formigas) {
+		puts("Falha na alocacao de memoria do vetor de fitness das formigas");
+		goto free_fitness_formigas;
+	}
 
 	double maior_fitness = 0.0;
 
-	const int MAX_GERACOES = 50;
 	for (int geracao = 0; geracao < MAX_GERACOES; ++geracao) {
 		init_matriz_cortes(matriz_cortes, qnt_cortes, molde_cortes);
-		for (int i = 0; i < qnt_cortes; ++i) sarrafo_restante[i] = TAMANHO_SARRAFO;
+		for (int i = 0; i < qnt_cortes; ++i) sarrafo_restante[i] = tamanho_sarrafo;
 
 		for (int i = 0; i < qnt_formigas; ++i) {
 			int indice_corte_anterior;
 			for (int j = 0; j < numero_maximo_cortes; ++j) {
 				if (j == 0) {
 					indice_corte_anterior = i;
-					push_formiga(matriz_cortes + i, qnt_cortes, formigas + i, matriz_cortes[i][i].tamanho, &sarrafo_restante[i], TAMANHO_SARRAFO);
+					push_formiga(matriz_cortes + i, qnt_cortes, formigas + i, matriz_cortes[i + (i * qnt_cortes)].tamanho, &sarrafo_restante[i], tamanho_sarrafo);
 					continue;
 				}
 
-				probabilidade_transicao(chance_visitar, feromonios + indice_corte_anterior * qnt_cortes, peso_feromonio, matriz_cortes + i, qnt_cortes, peso_heuristica);
+				probabilidade_transicao(chance_visitar, feromonios + indice_corte_anterior * qnt_cortes, PESO_FEROMONIO, matriz_cortes + i, qnt_cortes, PESO_HEURISTICA);
 				int proximo_corte = escolha_transicao(chance_visitar, qnt_cortes);
-				push_formiga(matriz_cortes + i, qnt_cortes, formigas + i, matriz_cortes[i][proximo_corte].tamanho, &sarrafo_restante[i], TAMANHO_SARRAFO);
+				if (proximo_corte >= qnt_cortes) proximo_corte = qnt_cortes - 1;
+				push_formiga(matriz_cortes + i, qnt_cortes, formigas + i, matriz_cortes[proximo_corte + (i * qnt_cortes)].tamanho, &sarrafo_restante[i], tamanho_sarrafo);
 
 				indice_corte_anterior = proximo_corte;
 			}
 
-			fitness_formigas[i] = funcao_objetivo(formigas + i, TAMANHO_SARRAFO);
+			fitness_formigas[i] = funcao_objetivo(formigas + i, tamanho_sarrafo);
 		}
 
 		//print_formigas(formigas, qnt_formigas);
@@ -428,22 +433,36 @@ int main(void) {
 
 		if (!maior_fitness || fitness_formigas[pos_maior_fitness_atual] > maior_fitness) {
 			maior_fitness = fitness_formigas[pos_maior_fitness_atual];
-			free_formigas(&melhor_formiga, 1);
+			liberar_formigas(&melhor_formiga, 1);
 			copiar_formiga(&melhor_formiga, formigas + pos_maior_fitness_atual);
 		}
 
-		atualizar_feromonios(feromonios, formigas, matriz_cortes, qnt_cortes, numero_maximo_cortes, TAMANHO_SARRAFO, fitness_formigas, qnt_formigas);
+		atualizar_feromonios(feromonios, formigas, matriz_cortes, qnt_cortes, tamanho_sarrafo, fitness_formigas, qnt_formigas);
 
-		free_formigas(formigas, qnt_formigas);
+		liberar_formigas(formigas, qnt_formigas);
 	}
 
 	print_melhor_formiga(&melhor_formiga);
 
-	free_formigas(formigas, qnt_formigas);
-	free_formigas(&melhor_formiga, 1);
-	free(feromonios);
-	free(chance_visitar);
-	free(fitness_formigas);
+	liberar_formigas(formigas, qnt_formigas);
+	liberar_formigas(&melhor_formiga, 1);
 
-	return 0;
+	codigo_saida = 0;
+
+free_fitness_formigas:
+	free(fitness_formigas);
+free_chance_visitar:
+	free(chance_visitar);
+free_feromonios:
+	free(feromonios);
+free_sarrafo_restante:
+	free(sarrafo_restante);
+free_formigas:
+	free(formigas);
+free_matriz_cortes:
+	free(matriz_cortes);
+free_molde_cortes:
+	free(molde_cortes);
+
+	return codigo_saida;
 }
